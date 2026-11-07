@@ -4,16 +4,16 @@ A Claude Code and Codex plugin that names Rex sessions after the agent's task. F
 
 One background watcher per Rex server follows terminal title and process events. It finds the session through Rex, so it works when Codex's shared server has stale `REX_SESSION` and `REX_BLOCK` variables. It does not read conversations or call a model.
 
+The watcher keeps running after the agent session ends or the plugin is removed, until Rex exits. To stop it, run `pkill -f 'start.mjs watch'`. Names stay as they are.
+
 ## Naming rules
 
-- Initially, names made of two lowercase words separated by a hyphen, such as `sparkling-creek`, are eligible for automatic naming. Other existing names are preserved.
+- Sessions named in Rex's generated style, two lowercase words joined by a hyphen like `sparkling-creek`, are renamed automatically. Other names are left alone. A manual name in that style, such as `release-notes`, is replaced too, and the old name is not restored.
 - Task titles become lowercase names of up to four words, separated by hyphens. Activity spinners, permission markers, and the project suffix are removed.
 - Once a pane names the session, it keeps control while it runs. Background tabs and split panes cannot take over. If that agent exits, another agent pane can take over.
-- A rename made outside the plugin stops automatic naming for that session, including after watcher restarts. Names written by another tool or agent count as outside renames.
+- A rename made outside the plugin stops automatic naming for that session, including after watcher restarts, even if the new name has two words. Names written by another tool or agent count as outside renames.
 - Rename a session to `auto` to enable automatic naming again.
 - Names stay in place when an agent or the watcher exits. Tab labels and status indicators are untouched.
-
-Rex does not say whether an existing label was generated or set by a person. A pre-existing manual name such as `release-notes` matches the generated-name rule and can be replaced. A manual rename observed while the watcher is running is preserved even if it has two words.
 
 The watcher uses titles owned by the current foreground agent. Generic titles such as `Codex` and titles left behind by exited processes are ignored.
 

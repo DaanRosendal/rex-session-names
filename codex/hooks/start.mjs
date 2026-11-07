@@ -60,6 +60,12 @@ export async function claimLock(path) {
   }
 }
 
+async function safely(task) {
+  try {
+    await task()
+  } catch {}
+}
+
 export async function watch(server, instance) {
   const data =
     process.env.REX_SESSION_NAMES_DATA ?? join(homedir(), '.local', 'state', 'rex-session-names')
@@ -95,31 +101,36 @@ export async function watch(server, instance) {
   try {
     const sessions = parse(await run(['ls', '--json']))?.sessions
     if (!Array.isArray(sessions)) return
-    const live = new Set(sessions.map(session => session.session_id))
+    const ids = sessions.map(session => session?.session_id).filter(id => typeof id === 'string')
+    const live = new Set(ids)
     for (const session of names.sessions.keys()) {
       if (!live.has(session)) {
         names.sessions.delete(session)
         names.dirty = true
       }
     }
-    for (const session of sessions) await names.refresh(session.session_id)
-    await persist()
+    for (const id of ids) await safely(() => names.refresh(id))
+    await safely(persist)
     for await (const line of input) {
-      await names.handle(parse(line))
-      await persist()
+      await safely(() => names.handle(parse(line)))
+      await safely(persist)
     }
   } finally {
     stop()
-    await persist()
-    await release()
-    process.removeListener('SIGTERM', stop)
-    process.removeListener('SIGINT', stop)
+    try {
+      await safely(persist)
+    } finally {
+      await release()
+      process.removeListener('SIGTERM', stop)
+      process.removeListener('SIGINT', stop)
+    }
   }
 }
 
 async function main() {
   if (process.argv[2] === 'watch') return watch(process.argv[3], process.argv[4])
   if (process.argv[2] !== 'start') throw new Error('Usage: node hooks/start.mjs start')
+  if (!process.env.REX_SESSION && !process.env.REX_BLOCK && !process.env.REX_SERVER) return
   const info = parse(await runner()(['whoami', '--json']))
   if (!info?.endpoint || !info?.instance_id) return
   const child = spawn(process.execPath, [filename, 'watch', info.endpoint, info.instance_id], {
