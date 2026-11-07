@@ -4,7 +4,7 @@ A Claude Code and Codex plugin that names Rex sessions after the agent's task. F
 
 One background watcher per Rex server follows terminal title and process events. It finds the session through Rex, so it works when Codex's shared server has stale `REX_SESSION` and `REX_BLOCK` variables. It does not read conversations or call a model.
 
-The watcher keeps running after the agent session ends or the plugin is removed, until Rex exits. To stop it, run `pkill -f 'start.mjs watch'`. Names stay as they are.
+The watcher keeps running after the agent session ends or the plugin is removed, until Rex exits. To stop it, run `pkill -f 'watcher.mjs watch'`. Names stay as they are.
 
 ## Naming rules
 

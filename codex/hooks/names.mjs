@@ -1,5 +1,7 @@
 const TERMINAL = 'com.superlogical.terminal'
 const AGENTS = new Set(['codex', 'claude', 'claude-code'])
+const MAX_NAME_WORDS = 4
+const MAX_NAME_LENGTH = 128
 const GENERATED = /^[a-z]+-[a-z]+$/
 
 export function parse(text) {
@@ -10,7 +12,7 @@ export function parse(text) {
   }
 }
 
-export function taskTitle(title) {
+function taskTitle(title) {
   return String(title ?? '')
     .replace(/^\[ [!.] \] Action Required(?: \| |$)/, '')
     .replace(/^[\u2800-\u28ff✳✻✽✶✢·●*]\s*/u, '')
@@ -29,9 +31,9 @@ export function sessionName(title) {
       .toLowerCase()
       .match(/[\p{L}\p{N}]+/gu) ?? []
   )
-    .slice(0, 4)
+    .slice(0, MAX_NAME_WORDS)
     .join('-')
-  return [...name].slice(0, 128).join('').replace(/-$/, '')
+  return [...name].slice(0, MAX_NAME_LENGTH).join('').replace(/-$/, '')
 }
 
 function sameProcess(owner, foreground) {
@@ -45,6 +47,19 @@ export class SessionNames {
   constructor(run, state = {}) {
     this.run = run
     this.sessions = new Map(Object.entries(state))
+  }
+
+  prune(liveIds) {
+    for (const session of this.sessions.keys()) {
+      if (!liveIds.has(session)) {
+        this.sessions.delete(session)
+        this.dirty = true
+      }
+    }
+  }
+
+  markClean() {
+    this.dirty = false
   }
 
   save(session, value) {
@@ -71,12 +86,12 @@ export class SessionNames {
 
     for (const block of blocks) {
       const args = ['block', 'call', '-s', session, '-b', block.block_id]
-      const [process, title, status] = await Promise.all([
+      const [processInfo, title, status] = await Promise.all([
         this.run([...args, 'process']).then(parse),
         this.run([...args, 'title']).then(parse),
         this.run([...args, 'program_status']).then(parse),
       ])
-      const foreground = process?.foreground
+      const foreground = processInfo?.foreground
       const isAgent =
         AGENTS.has(foreground?.name) ||
         (status?.records ?? []).some(
@@ -85,7 +100,7 @@ export class SessionNames {
         )
       if (
         block.block_id === owned?.block &&
-        (!process || !title || !status || (isAgent && !sameProcess(title.owner, foreground)))
+        (!processInfo || !title || !status || (isAgent && !sameProcess(title.owner, foreground)))
       )
         return
       if (!isAgent || !sameProcess(title?.owner, foreground)) continue

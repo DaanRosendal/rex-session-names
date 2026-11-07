@@ -11,11 +11,15 @@ import { promisify } from 'node:util'
 const exec = promisify(execFile)
 const skip =
   spawnSync('rex', ['--help'], { stdio: 'ignore' }).status === 0 ? false : 'rex is not installed'
-const plugin = fileURLToPath(new URL('../codex/hooks/start.mjs', import.meta.url))
+const plugin = fileURLToPath(new URL('../codex/hooks/watcher.mjs', import.meta.url))
 const fixture = fileURLToPath(new URL('./fixtures/agent-terminal.mjs', import.meta.url))
 
+const TEST_TIMEOUT_MS = 45000
+const EVENTUALLY_TIMEOUT_MS = 8000
+const POLL_INTERVAL_MS = 50
+
 async function eventually(check) {
-  const deadline = Date.now() + 8000
+  const deadline = Date.now() + EVENTUALLY_TIMEOUT_MS
   let error
   while (Date.now() < deadline) {
     try {
@@ -23,7 +27,7 @@ async function eventually(check) {
       return
     } catch (e) {
       error = e
-      await setTimeout(50)
+      await setTimeout(POLL_INTERVAL_MS)
     }
   }
   throw error
@@ -31,8 +35,9 @@ async function eventually(check) {
 
 test(
   'real Rex events name sessions despite stale environment and preserve manual names across restarts',
-  { timeout: 45000, skip },
+  { timeout: TEST_TIMEOUT_MS, skip },
   async () => {
+    // Unix socket paths are limited to about 100 characters, which os.tmpdir() exceeds on macOS.
     const dir = await mkdtemp('/tmp/rex-session-names-test-')
     const endpoint = `unix://${dir}/server.sock`
     const data = join(dir, 'plugin-data')
@@ -50,24 +55,24 @@ test(
           timeout: 5000,
         })
       ).stdout
-    let worker
+    let watcher
     let exited
     let started = false
     let errors = ''
     const startWorker = instance => {
-      worker = spawn(process.execPath, [plugin, 'watch', endpoint, instance], {
+      watcher = spawn(process.execPath, [plugin, 'watch', endpoint, instance], {
         env,
         stdio: ['ignore', 'ignore', 'pipe'],
       })
-      worker.stderr.on('data', chunk => {
+      watcher.stderr.on('data', chunk => {
         errors += chunk
       })
-      exited = once(worker, 'exit')
+      exited = once(watcher, 'exit')
     }
     const stopWorker = async () => {
-      worker.kill('SIGTERM')
+      watcher.kill('SIGTERM')
       const [code] = await exited
-      worker = undefined
+      watcher = undefined
       assert.equal(code, 0, errors)
     }
     try {
@@ -102,7 +107,7 @@ test(
       ])
       const locks = (await readdir(data)).filter(name => name.endsWith('.pid'))
       assert.equal(locks.length, 1)
-      assert.equal(await readFile(join(data, locks[0]), 'utf8'), String(worker.pid))
+      assert.equal(await readFile(join(data, locks[0]), 'utf8'), String(watcher.pid))
 
       await send({ title: 'Fix login redirect | project' })
       await eventually(async () => assert.equal(await label(), 'fix-login-redirect'))
@@ -172,11 +177,11 @@ test(
       assert.equal(await label(), 'background-build-task')
       assert.equal(errors, '')
     } finally {
-      if (worker) {
-        worker.kill('SIGTERM')
+      if (watcher) {
+        watcher.kill('SIGTERM')
         await exited
       }
-      if (started) await run(['server', 'stop'])
+      if (started) await run(['server', 'stop']).catch(() => {})
       await rm(dir, { recursive: true, force: true })
     }
   },
