@@ -1,0 +1,10 @@
+{
+  "name": "rex-session-names",
+  "owner": { "name": "Daan Rosendal" },
+  "plugins": [
+    {
+      "name": "rex-session-names",
+      "source": { "source": "local", "path": "./codex" }
+    }
+  ]
+}

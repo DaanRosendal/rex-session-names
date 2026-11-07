@@ -1,0 +1,12 @@
+{
+  "name": "rex-session-names",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "test": "node --test tests/names.test.mjs tests/worker.test.mjs",
+    "test:integration": "node --test tests/rex-integration.test.mjs"
+  }
+}
