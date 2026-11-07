@@ -14,8 +14,12 @@ const skip =
 const plugin = fileURLToPath(new URL('../codex/hooks/watcher.mjs', import.meta.url))
 const fixture = fileURLToPath(new URL('./fixtures/agent-terminal.mjs', import.meta.url))
 
+const TEST_TIMEOUT_MS = 45000
+const EVENTUALLY_TIMEOUT_MS = 8000
+const POLL_INTERVAL_MS = 50
+
 async function eventually(check) {
-  const deadline = Date.now() + 8000
+  const deadline = Date.now() + EVENTUALLY_TIMEOUT_MS
   let error
   while (Date.now() < deadline) {
     try {
@@ -23,7 +27,7 @@ async function eventually(check) {
       return
     } catch (e) {
       error = e
-      await setTimeout(50)
+      await setTimeout(POLL_INTERVAL_MS)
     }
   }
   throw error
@@ -31,8 +35,9 @@ async function eventually(check) {
 
 test(
   'real Rex events name sessions despite stale environment and preserve manual names across restarts',
-  { timeout: 45000, skip },
+  { timeout: TEST_TIMEOUT_MS, skip },
   async () => {
+    // Unix socket paths are limited to about 100 characters, which os.tmpdir() exceeds on macOS.
     const dir = await mkdtemp('/tmp/rex-session-names-test-')
     const endpoint = `unix://${dir}/server.sock`
     const data = join(dir, 'plugin-data')
@@ -176,7 +181,7 @@ test(
         watcher.kill('SIGTERM')
         await exited
       }
-      if (started) await run(['server', 'stop'])
+      if (started) await run(['server', 'stop']).catch(() => {})
       await rm(dir, { recursive: true, force: true })
     }
   },
