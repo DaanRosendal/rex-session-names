@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { execFile, spawn } from 'node:child_process'
+import { execFile, spawn, spawnSync } from 'node:child_process'
 import { once } from 'node:events'
 import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 
 const exec = promisify(execFile)
+const skip = spawnSync('rex', ['--help'], { stdio: 'ignore' }).status === 0 ? false : 'rex is not installed'
 const plugin = fileURLToPath(new URL('../codex/hooks/start.mjs', import.meta.url))
 const fixture = fileURLToPath(new URL('./fixtures/agent-terminal.mjs', import.meta.url))
 
@@ -29,7 +30,7 @@ async function eventually(check) {
 
 test(
   'real Rex events name sessions despite stale environment and preserve manual names across restarts',
-  { timeout: 45000 },
+  { timeout: 45000, skip },
   async () => {
     const dir = await mkdtemp('/tmp/rex-session-names-test-')
     const endpoint = `unix://${dir}/server.sock`

@@ -109,6 +109,7 @@ export class SessionNames {
   async handle(event) {
     if (event?.type === 'session_destroyed') {
       const session = event.payload?.session_id
+      if (typeof session !== 'string') return
       this.sessions.delete(session)
       for (const key of this.titles.keys())
         if (key.startsWith(`${session}/`)) this.titles.delete(key)
