@@ -1,64 +1,15 @@
-import { execFile, spawn } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { mkdir, open, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { createInterface } from 'node:readline'
 import { fileURLToPath } from 'node:url'
-import { promisify } from 'node:util'
+import { claimLock } from './lock.mjs'
 import { parse, SessionNames } from './names.mjs'
+import { rexArgs, runner } from './rex-cli.mjs'
 
-const exec = promisify(execFile)
 const filename = fileURLToPath(import.meta.url)
-
-function rexArgs(server, args) {
-  return ['--autostart=false', '--timeout', '2s', ...(server ? ['--server', server] : []), ...args]
-}
-
-function runner(server) {
-  return async args => {
-    try {
-      return (
-        await exec('rex', rexArgs(server, args), {
-          timeout: 2500,
-          maxBuffer: 4 * 1024 * 1024,
-        })
-      ).stdout
-    } catch {
-      return undefined
-    }
-  }
-}
-
-export async function claimLock(path) {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const file = await open(path, 'wx', 0o600)
-      await file.writeFile(String(process.pid))
-      await file.close()
-      return async () => {
-        if ((await readFile(path, 'utf8').catch(() => '')) === String(process.pid))
-          await unlink(path).catch(() => {})
-      }
-    } catch (error) {
-      if (error.code !== 'EEXIST') throw error
-      const pid = Number(await readFile(path, 'utf8').catch(() => ''))
-      if (!Number.isSafeInteger(pid) || pid <= 0) {
-        const file = await stat(path).catch(() => undefined)
-        if (!file || Date.now() - file.mtimeMs < 5000) return
-        await unlink(path).catch(() => {})
-        continue
-      }
-      try {
-        process.kill(pid, 0)
-        return
-      } catch (error) {
-        if (error.code !== 'ESRCH') return
-      }
-      await unlink(path).catch(() => {})
-    }
-  }
-}
 
 async function safely(task) {
   try {
@@ -66,7 +17,7 @@ async function safely(task) {
   } catch {}
 }
 
-export async function watch(server, instance) {
+async function watch(server, instance) {
   const data =
     process.env.REX_SESSION_NAMES_DATA ?? join(homedir(), '.local', 'state', 'rex-session-names')
   await mkdir(data, { recursive: true, mode: 0o700 })
@@ -87,7 +38,7 @@ export async function watch(server, instance) {
       mode: 0o600,
     })
     await rename(temp, stateFile)
-    names.dirty = false
+    names.markClean()
   }
   const events = spawn('rex', rexArgs(server, ['events', '--all', '--json']), {
     stdio: ['ignore', 'pipe', 'ignore'],
@@ -102,13 +53,7 @@ export async function watch(server, instance) {
     const sessions = parse(await run(['ls', '--json']))?.sessions
     if (!Array.isArray(sessions)) return
     const ids = sessions.map(session => session?.session_id).filter(id => typeof id === 'string')
-    const live = new Set(ids)
-    for (const session of names.sessions.keys()) {
-      if (!live.has(session)) {
-        names.sessions.delete(session)
-        names.dirty = true
-      }
-    }
+    names.prune(new Set(ids))
     for (const id of ids) await safely(() => names.refresh(id))
     await safely(persist)
     for await (const line of input) {
@@ -129,7 +74,7 @@ export async function watch(server, instance) {
 
 async function main() {
   if (process.argv[2] === 'watch') return watch(process.argv[3], process.argv[4])
-  if (process.argv[2] !== 'start') throw new Error('Usage: node hooks/start.mjs start')
+  if (process.argv[2] !== 'start') throw new Error('Usage: node hooks/watcher.mjs start')
   if (!process.env.REX_SESSION && !process.env.REX_BLOCK && !process.env.REX_SERVER) return
   const info = parse(await runner()(['whoami', '--json']))
   if (!info?.endpoint || !info?.instance_id) return

@@ -20,7 +20,7 @@ test('each host starts the watcher with its own hook file', async () => {
   for (const hooks of [claude, codex]) {
     const hook = hooks.hooks.SessionStart[0].hooks[0]
     assert.equal(hook.type, 'command')
-    assert.match(hook.command, /start\.mjs" start$/)
+    assert.match(hook.command, /watcher\.mjs" start$/)
     assert.equal(hook.async, true)
   }
 })

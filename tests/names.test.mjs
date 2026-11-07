@@ -116,7 +116,7 @@ test('preserves existing names outside the generated-name pattern', async () => 
   assert.equal(session.label, 'my-release-notes')
 })
 
-test('a manual two-word name remains pinned across task changes and worker restarts', async () => {
+test('a manual two-word name remains pinned across task changes and watcher restarts', async () => {
   const { blocks, session, names, run } = setup()
   await names.refresh(SESSION)
   session.label = 'release-notes'
@@ -129,7 +129,7 @@ test('a manual two-word name remains pinned across task changes and worker resta
   assert.equal(session.label, 'release-notes')
 })
 
-test('automatic ownership survives a worker restart', async () => {
+test('automatic ownership survives a watcher restart', async () => {
   const { blocks, session, names, run } = setup()
   await names.refresh(SESSION)
   const restarted = new SessionNames(run, Object.fromEntries(names.sessions))

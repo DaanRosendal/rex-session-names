@@ -11,7 +11,7 @@ import { promisify } from 'node:util'
 const exec = promisify(execFile)
 const skip =
   spawnSync('rex', ['--help'], { stdio: 'ignore' }).status === 0 ? false : 'rex is not installed'
-const plugin = fileURLToPath(new URL('../codex/hooks/start.mjs', import.meta.url))
+const plugin = fileURLToPath(new URL('../codex/hooks/watcher.mjs', import.meta.url))
 const fixture = fileURLToPath(new URL('./fixtures/agent-terminal.mjs', import.meta.url))
 
 async function eventually(check) {
@@ -50,24 +50,24 @@ test(
           timeout: 5000,
         })
       ).stdout
-    let worker
+    let watcher
     let exited
     let started = false
     let errors = ''
     const startWorker = instance => {
-      worker = spawn(process.execPath, [plugin, 'watch', endpoint, instance], {
+      watcher = spawn(process.execPath, [plugin, 'watch', endpoint, instance], {
         env,
         stdio: ['ignore', 'ignore', 'pipe'],
       })
-      worker.stderr.on('data', chunk => {
+      watcher.stderr.on('data', chunk => {
         errors += chunk
       })
-      exited = once(worker, 'exit')
+      exited = once(watcher, 'exit')
     }
     const stopWorker = async () => {
-      worker.kill('SIGTERM')
+      watcher.kill('SIGTERM')
       const [code] = await exited
-      worker = undefined
+      watcher = undefined
       assert.equal(code, 0, errors)
     }
     try {
@@ -102,7 +102,7 @@ test(
       ])
       const locks = (await readdir(data)).filter(name => name.endsWith('.pid'))
       assert.equal(locks.length, 1)
-      assert.equal(await readFile(join(data, locks[0]), 'utf8'), String(worker.pid))
+      assert.equal(await readFile(join(data, locks[0]), 'utf8'), String(watcher.pid))
 
       await send({ title: 'Fix login redirect | project' })
       await eventually(async () => assert.equal(await label(), 'fix-login-redirect'))
@@ -172,8 +172,8 @@ test(
       assert.equal(await label(), 'background-build-task')
       assert.equal(errors, '')
     } finally {
-      if (worker) {
-        worker.kill('SIGTERM')
+      if (watcher) {
+        watcher.kill('SIGTERM')
         await exited
       }
       if (started) await run(['server', 'stop'])

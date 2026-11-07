@@ -3,10 +3,10 @@ import { mkdtemp, readFile, rm, stat, utimes, writeFile } from 'node:fs/promises
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
-import { claimLock } from '../codex/hooks/start.mjs'
+import { claimLock } from '../codex/hooks/lock.mjs'
 
 test('only one watcher can claim a server, and its PID file is private', async t => {
-  const dir = await mkdtemp(join(tmpdir(), 'rex-session-names-lock-'))
+  const dir = await mkdtemp(join(tmpdir(), 'rex-lock-'))
   t.after(() => rm(dir, { recursive: true, force: true }))
   const path = join(dir, 'server.pid')
   const release = await claimLock(path)
@@ -19,7 +19,7 @@ test('only one watcher can claim a server, and its PID file is private', async t
 })
 
 test('an abandoned lock is reclaimed without racing a fresh partial write', async t => {
-  const dir = await mkdtemp(join(tmpdir(), 'rex-session-names-lock-'))
+  const dir = await mkdtemp(join(tmpdir(), 'rex-lock-'))
   t.after(() => rm(dir, { recursive: true, force: true }))
   const path = join(dir, 'server.pid')
   await writeFile(path, '')
