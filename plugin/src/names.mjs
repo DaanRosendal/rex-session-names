@@ -44,9 +44,10 @@ export class SessionNames {
   titles = new Map()
   dirty = false
 
-  constructor(run, state = {}) {
+  constructor(run, state) {
     this.run = run
-    this.sessions = new Map(Object.entries(state))
+    const saved = state && typeof state === 'object' && !Array.isArray(state) ? state : {}
+    this.sessions = new Map(Object.entries(saved))
   }
 
   prune(liveIds) {
@@ -67,12 +68,14 @@ export class SessionNames {
     this.dirty = true
   }
 
-  async refresh(session) {
-    const view = parse(await this.run(['session', 'inspect', session, '--json']))
+  async refresh(session, inspected) {
+    const view = inspected ?? parse(await this.run(['session', 'inspect', session, '--json']))
     if (!view || typeof view.label !== 'string') return
     const owned = this.sessions.get(session)
-    if (view.label === 'auto') this.sessions.delete(session)
-    else if (owned === null) return
+    if (view.label === 'auto') {
+      this.sessions.delete(session)
+      this.dirty = true
+    } else if (owned === null) return
     else if (owned ? view.label !== owned.label : !GENERATED.test(view.label)) {
       this.save(session, null)
       return
@@ -114,7 +117,11 @@ export class SessionNames {
           this.save(session, null)
           return
         }
-        if ((await this.run(['session', 'rename', '--', session, name])) === undefined) return
+        // A rename that outlives the CLI timeout is still applied by the server.
+        if ((await this.run(['session', 'rename', '--', session, name])) === undefined) {
+          const after = parse(await this.run(['session', 'inspect', session, '--json']))
+          if (after?.label !== name) return
+        }
       }
       this.save(session, { label: name, block: block.block_id })
       return
@@ -142,11 +149,8 @@ export class SessionNames {
     if (change.type === 'session_label_changed') {
       const view = parse(await this.run(['session', 'inspect', session, '--json']))
       if (!view) return
-      if (view.label === 'auto') {
-        this.sessions.delete(session)
-        this.dirty = true
-        await this.refresh(session)
-      } else if (this.sessions.get(session)?.label !== view.label) {
+      if (view.label === 'auto') await this.refresh(session, view)
+      else if (this.sessions.get(session)?.label !== view.label) {
         this.save(session, null)
       }
     } else if (change.type === 'block_event') {

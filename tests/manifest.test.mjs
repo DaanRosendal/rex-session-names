@@ -1,26 +1,51 @@
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 import { test } from 'node:test'
 
 const json = async path => JSON.parse(await readFile(new URL(path, import.meta.url), 'utf8'))
 
-test('both hosts load the same plugin name and version', async () => {
-  const claude = await json('../.claude-plugin/plugin.json')
-  const marketplace = await json('../.agents/plugins/marketplace.json')
-  const source = marketplace.plugins.find(plugin => plugin.name === 'rex-session-names').source
-  assert.deepEqual(source, { source: 'local', path: './codex' })
-  const codex = await json(`../${source.path}/.codex-plugin/plugin.json`)
-  assert.equal(codex.name, claude.name)
-  assert.equal(codex.version, claude.version)
+test('both marketplaces serve the same plugin directory', async () => {
+  const claude = await json('../.claude-plugin/marketplace.json')
+  const codex = await json('../.agents/plugins/marketplace.json')
+  assert.equal(claude.name, codex.name)
+  assert.deepEqual(
+    claude.plugins.map(plugin => plugin.name),
+    codex.plugins.map(plugin => plugin.name),
+  )
+  assert.equal(claude.plugins[0].source, './plugin')
+  assert.deepEqual(codex.plugins[0].source, { source: 'local', path: './plugin' })
 })
 
-test('each host starts the watcher with its own hook file', async () => {
-  const claude = await json('../hooks/hooks.json')
-  const codex = await json('../codex/hooks/start.json')
-  for (const hooks of [claude, codex]) {
-    const hook = hooks.hooks.SessionStart[0].hooks[0]
-    assert.equal(hook.type, 'command')
-    assert.match(hook.command, /watcher\.mjs" start$/)
-    assert.equal(hook.async, true)
+test('the plugin has one manifest, shared by both hosts, and no Codex manifest', async () => {
+  const manifest = await json('../plugin/.claude-plugin/plugin.json')
+  assert.equal(manifest.name, 'rex-session-names')
+  assert.match(manifest.version, /^\d+\.\d+\.\d+$/)
+  const entries = await readdir(new URL('../plugin/', import.meta.url), { recursive: true })
+  assert.ok(!entries.some(entry => entry.includes('.codex-plugin')))
+})
+
+test('the hook starts the watcher with the variable both hosts set', async () => {
+  const hooks = await json('../plugin/hooks/hooks.json')
+  const hook = hooks.hooks.SessionStart[0].hooks[0]
+  assert.equal(hook.type, 'command')
+  assert.equal(hook.command, 'node "${CLAUDE_PLUGIN_ROOT}/src/name-watcher.mjs" start')
+  assert.equal(hook.async, true)
+})
+
+test('the marketplace entry names the manifest, and the hook script ships inside plugin/', async () => {
+  const manifest = await json('../plugin/.claude-plugin/plugin.json')
+  const marketplace = await json('../.claude-plugin/marketplace.json')
+  assert.equal(marketplace.plugins[0].name, manifest.name)
+  const entries = await readdir(new URL('../plugin/src/', import.meta.url))
+  assert.ok(entries.includes('name-watcher.mjs'))
+})
+
+test('plugin source files import only each other and Node built-ins', async () => {
+  const dir = new URL('../plugin/src/', import.meta.url)
+  for (const name of await readdir(dir)) {
+    const source = await readFile(new URL(name, dir), 'utf8')
+    for (const [, specifier] of source.matchAll(/from '([^']+)'/g)) {
+      assert.match(specifier, /^(node:[a-z_/]+|\.\/[a-z-]+\.mjs)$/, `${name} imports ${specifier}`)
+    }
   }
 })

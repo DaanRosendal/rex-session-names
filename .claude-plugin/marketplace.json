@@ -4,5 +4,5 @@
     "description": "Automatic Rex session names for Claude Code and Codex"
   },
   "owner": { "name": "Daan Rosendal" },
-  "plugins": [{ "name": "rex-session-names", "source": "./" }]
+  "plugins": [{ "name": "rex-session-names", "source": "./plugin" }]
 }

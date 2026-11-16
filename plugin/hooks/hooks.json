@@ -2,12 +2,11 @@
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "startup|resume|clear|compact",
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/codex/hooks/watcher.mjs\" start",
-            "timeout": 5,
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/name-watcher.mjs\" start",
+            "timeout": 10,
             "async": true
           }
         ]

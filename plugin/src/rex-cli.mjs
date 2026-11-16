@@ -1,4 +1,3 @@
-// Identical in rex-tab-status and rex-session-names. Keep both copies in sync.
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 

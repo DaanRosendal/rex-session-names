@@ -1,6 +1,0 @@
-{
-  "name": "rex-session-names",
-  "version": "0.1.0",
-  "description": "Name Rex sessions after the coding agent's task",
-  "hooks": "./hooks/start.json"
-}
