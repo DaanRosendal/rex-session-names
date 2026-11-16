@@ -11,7 +11,7 @@ import { promisify } from 'node:util'
 const exec = promisify(execFile)
 const skip =
   spawnSync('rex', ['--help'], { stdio: 'ignore' }).status === 0 ? false : 'rex is not installed'
-const plugin = fileURLToPath(new URL('../codex/hooks/watcher.mjs', import.meta.url))
+const plugin = fileURLToPath(new URL('../plugin/src/name-watcher.mjs', import.meta.url))
 const fixture = fileURLToPath(new URL('./fixtures/agent-terminal.mjs', import.meta.url))
 
 const TEST_TIMEOUT_MS = 45000
@@ -107,7 +107,7 @@ test(
       ])
       const locks = (await readdir(data)).filter(name => name.endsWith('.pid'))
       assert.equal(locks.length, 1)
-      assert.equal(await readFile(join(data, locks[0]), 'utf8'), String(watcher.pid))
+      assert.equal(JSON.parse(await readFile(join(data, locks[0]), 'utf8')).pid, watcher.pid)
 
       await send({ title: 'Fix login redirect | project' })
       await eventually(async () => assert.equal(await label(), 'fix-login-redirect'))

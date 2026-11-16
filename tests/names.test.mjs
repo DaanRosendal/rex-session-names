@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { SessionNames, sessionName } from '../codex/hooks/names.mjs'
+import { SessionNames, sessionName } from '../plugin/src/names.mjs'
 
 const SESSION = 'session:s1'
 const BLOCK = 'block:b1'
@@ -235,6 +235,22 @@ test('a failed rename is retried when the next agent status arrives', async () =
     }),
   )
   assert.equal(session.label, 'review-mr-123')
+})
+
+test('a rename that times out but is applied keeps automatic ownership', async () => {
+  const { session, run } = setup()
+  let timedOut = true
+  const names = new SessionNames(async args => {
+    const result = await run(args)
+    if (args[1] === 'rename' && timedOut) {
+      timedOut = false
+      return undefined
+    }
+    return result
+  })
+  await names.refresh(SESSION)
+  assert.equal(session.label, 'review-mr-123')
+  assert.deepEqual(names.sessions.get(SESSION), { label: 'review-mr-123', block: BLOCK })
 })
 
 test('unreadable terminal metadata leaves the session name alone', async () => {
