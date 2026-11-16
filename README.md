@@ -36,7 +36,7 @@ Start a new agent session afterwards. In Codex, trust the hook in `/hooks` first
 
 - Sessions with a generated name like `sparkling-creek` take the agent's task name.
 - Rename a session yourself and automatic naming stops for it. Rename it to `auto` to turn it back on.
-- If several agents run in one session, the first one to name it keeps the name. Later agents do not overwrite it. Rex's own `rex skill setup --session-naming` tells every agent to name the session, so a newer agent can replace the name.
+- If several agents run in one session, the first one to name it keeps the name. Later agents do not overwrite it.
 
 ## Stop and uninstall
 
