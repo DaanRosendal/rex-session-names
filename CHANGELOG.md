@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0] - 2026-11-18
+
+### Added
+
+- Add `REX_SESSION_NAMES_APPS` to choose which agents name sessions, replacing the default `claude`, `claude-code` and `codex`. A title that is only a listed agent's name no longer becomes a session name ([`77a1732`](https://github.com/DaanRosendal/rex-session-names/commit/77a1732))
+- Document how to start the watcher for an agent other than Claude Code and Codex ([`f830ebd`](https://github.com/DaanRosendal/rex-session-names/commit/f830ebd))
+
 ## [0.2.0] - 2026-11-16
 
 ### Changed
@@ -24,5 +31,6 @@
 
 - Name Rex sessions after the task in the agent's terminal title, for Claude Code and Codex ([`5722119`](https://github.com/DaanRosendal/rex-session-names/commit/5722119))
 
+[0.3.0]: https://github.com/DaanRosendal/rex-session-names/releases/tag/v0.3.0
 [0.2.0]: https://github.com/DaanRosendal/rex-session-names/releases/tag/v0.2.0
 [0.1.0]: https://github.com/DaanRosendal/rex-session-names/releases/tag/v0.1.0

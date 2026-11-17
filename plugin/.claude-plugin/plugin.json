@@ -1,6 +1,6 @@
 {
   "name": "rex-session-names",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Name Rex sessions after the coding agent's task",
   "author": {
     "name": "Daan Rosendal"
