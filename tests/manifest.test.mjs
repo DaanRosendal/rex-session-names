@@ -49,3 +49,9 @@ test('plugin source files import only each other and Node built-ins', async () =
     }
   }
 })
+
+test('the changelog leads with the manifest version', async () => {
+  const { version } = await json('../plugin/.claude-plugin/plugin.json')
+  const changelog = await readFile(new URL('../CHANGELOG.md', import.meta.url), 'utf8')
+  assert.equal(changelog.match(/^## \[(\S+)\]/m)[1], version)
+})
