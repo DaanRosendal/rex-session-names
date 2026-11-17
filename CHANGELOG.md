@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.1] - 2026-11-18
+
+### Fixed
+
+- Stop two watchers from claiming a stale lock at the same time when several sessions start at once ([`b1df256`](https://github.com/DaanRosendal/rex-session-names/commit/b1df256))
+
 ## [0.3.0] - 2026-11-18
 
 ### Added
@@ -31,6 +37,7 @@
 
 - Name Rex sessions after the task in the agent's terminal title, for Claude Code and Codex ([`5722119`](https://github.com/DaanRosendal/rex-session-names/commit/5722119))
 
+[0.3.1]: https://github.com/DaanRosendal/rex-session-names/releases/tag/v0.3.1
 [0.3.0]: https://github.com/DaanRosendal/rex-session-names/releases/tag/v0.3.0
 [0.2.0]: https://github.com/DaanRosendal/rex-session-names/releases/tag/v0.2.0
 [0.1.0]: https://github.com/DaanRosendal/rex-session-names/releases/tag/v0.1.0
