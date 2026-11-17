@@ -8,7 +8,7 @@ import { setTimeout as sleep } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 import { claimLock, compareVersions, isWatcher, readLock, terminate } from './lock.mjs'
 import { SessionNames } from './names.mjs'
-import { parse, rexArgs, runner } from './rex-cli.mjs'
+import { parse, rexEvents, runner } from './rex-cli.mjs'
 
 const filename = fileURLToPath(import.meta.url)
 const RECONNECT_MIN_MS = 1000
@@ -72,9 +72,7 @@ async function watch(server, instance) {
     let failures = 0
     while (!stopping) {
       const connectedAt = Date.now()
-      events = spawn('rex', rexArgs(server, ['events', '--all', '--json']), {
-        stdio: ['ignore', 'pipe', 'ignore'],
-      })
+      events = rexEvents(server)
       const closed = new Promise(done => {
         events.once('close', done)
         events.once('error', done)

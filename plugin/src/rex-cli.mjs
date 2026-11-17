@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 import { promisify } from 'node:util'
 
 const exec = promisify(execFile)
@@ -36,4 +36,10 @@ export function parse(text) {
   } catch {
     return undefined
   }
+}
+
+export function rexEvents(server) {
+  return spawn('rex', rexArgs(server, ['events', '--all', '--json']), {
+    stdio: ['ignore', 'pipe', 'ignore'],
+  })
 }
