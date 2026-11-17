@@ -1,16 +1,10 @@
+import { parse } from './rex-cli.mjs'
+
 const TERMINAL = 'com.superlogical.terminal'
 const AGENTS = new Set(['codex', 'claude', 'claude-code'])
 const MAX_NAME_WORDS = 4
 const MAX_NAME_LENGTH = 128
 const GENERATED = /^[a-z]+-[a-z]+$/
-
-export function parse(text) {
-  try {
-    return JSON.parse(text)
-  } catch {
-    return undefined
-  }
-}
 
 function taskTitle(title) {
   return String(title ?? '')

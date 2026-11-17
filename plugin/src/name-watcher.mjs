@@ -7,8 +7,8 @@ import { createInterface } from 'node:readline'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 import { claimLock, compareVersions, isWatcher, readLock, terminate } from './lock.mjs'
-import { parse, SessionNames } from './names.mjs'
-import { rexArgs, runner } from './rex-cli.mjs'
+import { SessionNames } from './names.mjs'
+import { parse, rexArgs, runner } from './rex-cli.mjs'
 
 const filename = fileURLToPath(import.meta.url)
 const RECONNECT_MIN_MS = 1000
