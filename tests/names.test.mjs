@@ -15,7 +15,7 @@ function agent(title = '⠹ Review MR 123 | project', pid = 10, app = 'codex') {
   }
 }
 
-function setup(label = 'sparkling-creek', saved = {}) {
+function setup(label = 'sparkling-creek', saved = {}, apps) {
   const blocks = new Map([[BLOCK, agent()]])
   const session = { label }
   const calls = []
@@ -53,7 +53,7 @@ function setup(label = 'sparkling-creek', saved = {}) {
       if (method === 'program_status') return JSON.stringify({ records: block.records })
     }
   }
-  return { blocks, session, calls, run, names: new SessionNames(run, saved) }
+  return { blocks, session, calls, run, names: new SessionNames(run, saved, apps) }
 }
 
 function event(type, payload = {}) {
@@ -171,6 +171,33 @@ test('native program status identifies an agent with a different executable name
   block.records.push({ app: 'codex', owner: block.owner })
   await names.refresh(SESSION)
   assert.equal(session.label, 'review-mr-123')
+})
+
+test('an agent outside the defaults names sessions once it is configured', async () => {
+  const unlisted = setup()
+  unlisted.blocks.set(BLOCK, agent('Fix login redirect', 10, 'aider'))
+  await unlisted.names.refresh(SESSION)
+  assert.equal(unlisted.session.label, 'sparkling-creek')
+
+  const { blocks, session, names } = setup('sparkling-creek', {}, ['aider'])
+  blocks.set(BLOCK, agent('Fix login redirect', 10, 'aider'))
+  await names.refresh(SESSION)
+  assert.equal(session.label, 'fix-login-redirect')
+})
+
+test('a configured agent reporting through program status names a session', async () => {
+  const { blocks, session, names } = setup('sparkling-creek', {}, ['aider'])
+  const block = blocks.get(BLOCK)
+  block.foreground.name = 'python'
+  block.owner.name = 'python'
+  block.records.push({ app: 'aider', owner: block.owner })
+  await names.refresh(SESSION)
+  assert.equal(session.label, 'review-mr-123')
+})
+
+test('a title that is only a configured agent name claims no name', () => {
+  assert.equal(sessionName('Aider | project', ['aider']), '')
+  assert.equal(sessionName('Aider | project'), 'aider')
 })
 
 test('ordinary terminals and stale title owners cannot name a session', async () => {

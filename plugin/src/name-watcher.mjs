@@ -7,7 +7,7 @@ import { createInterface } from 'node:readline'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 import { claimLock, compareVersions, isWatcher, readLock, terminate } from './lock.mjs'
-import { SessionNames } from './names.mjs'
+import { DEFAULT_APPS, SessionNames } from './names.mjs'
 import { parse, rexEvents, runner } from './rex-cli.mjs'
 
 const filename = fileURLToPath(import.meta.url)
@@ -23,6 +23,14 @@ const dataDir = () =>
 function paths(server, instance) {
   const key = createHash('sha256').update(`${server}/${instance}`).digest('hex').slice(0, 16)
   return { lockPath: join(dataDir(), `${key}.pid`), stateFile: join(dataDir(), `${key}.json`) }
+}
+
+function apps() {
+  const list = (process.env.REX_SESSION_NAMES_APPS ?? '')
+    .split(',')
+    .map(app => app.trim())
+    .filter(Boolean)
+  return list.length > 0 ? list : DEFAULT_APPS
 }
 
 async function version() {
@@ -46,7 +54,7 @@ async function watch(server, instance) {
   if (!release) return
   const run = runner(server)
   const saved = parse(await readFile(stateFile, 'utf8').catch(() => undefined))
-  const names = new SessionNames(run, saved)
+  const names = new SessionNames(run, saved, apps())
   const persist = async () => {
     if (!names.dirty) return
     const temp = `${stateFile}.${process.pid}.tmp`

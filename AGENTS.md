@@ -1,6 +1,6 @@
 # AGENTS.md
 
-A plugin for Claude Code and Codex that names Rex sessions after the agent's task. One background watcher follows terminal titles and process events, so no per-agent code exists. README.md describes the behavior.
+A plugin for Claude Code and Codex that names Rex sessions after the agent's task. One background watcher follows terminal titles and process events. Which agents count is a list of names (`DEFAULT_APPS`, or `REX_SESSION_NAMES_APPS`), so no per-agent code exists. README.md describes the behavior.
 
 ## Layout
 

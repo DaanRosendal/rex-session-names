@@ -1,7 +1,7 @@
 import { parse } from './rex-cli.mjs'
 
 const TERMINAL = 'com.superlogical.terminal'
-const AGENTS = new Set(['codex', 'claude', 'claude-code'])
+export const DEFAULT_APPS = ['codex', 'claude', 'claude-code']
 const MAX_NAME_WORDS = 4
 const MAX_NAME_LENGTH = 128
 const GENERATED = /^[a-z]+-[a-z]+$/
@@ -15,9 +15,10 @@ function taskTitle(title) {
     .trim()
 }
 
-export function sessionName(title) {
+export function sessionName(title, apps = DEFAULT_APPS) {
   const task = taskTitle(title)
   if (/^(codex|claude(?: code)?|new (?:task|session)|untitled|ready)$/i.test(task)) return ''
+  if (apps.some(app => app.toLowerCase() === task.toLowerCase())) return ''
   const name = (
     task
       .normalize('NFKD')
@@ -38,8 +39,9 @@ export class SessionNames {
   titles = new Map()
   dirty = false
 
-  constructor(run, state) {
+  constructor(run, state, apps = DEFAULT_APPS) {
     this.run = run
+    this.apps = apps
     const saved = state && typeof state === 'object' && !Array.isArray(state) ? state : {}
     this.sessions = new Map(Object.entries(saved))
   }
@@ -90,10 +92,11 @@ export class SessionNames {
       ])
       const foreground = processInfo?.foreground
       const isAgent =
-        AGENTS.has(foreground?.name) ||
+        this.apps.includes(foreground?.name) ||
         (status?.records ?? []).some(
           record =>
-            AGENTS.has(record.effective_app ?? record.app) && sameProcess(record.owner, foreground),
+            this.apps.includes(record.effective_app ?? record.app) &&
+            sameProcess(record.owner, foreground),
         )
       if (
         block.block_id === owned?.block &&
@@ -102,7 +105,7 @@ export class SessionNames {
         return
       if (!isAgent || !sameProcess(title?.owner, foreground)) continue
       this.titles.set(`${session}/${block.block_id}`, taskTitle(title.title))
-      const name = sessionName(title.title)
+      const name = sessionName(title.title, this.apps)
       if (!name) return
       if (name !== view.label) {
         const current = parse(await this.run(['session', 'inspect', session, '--json']))
