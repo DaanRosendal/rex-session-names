@@ -1,6 +1,6 @@
 # rex-session-names
 
-A Claude Code and Codex plugin that names [Rex](https://www.superlogical.com/rex) sessions after the agent's task. It reads the title the agent already sets on its terminal. No model calls, and your conversations are never read.
+A plugin that names [Rex](https://www.superlogical.com/rex) sessions after the agent's task. It reads the title the agent already sets on its terminal. No model calls, and your conversations are never read.
 
 | Terminal title                       | Session name              |
 | ------------------------------------ | ------------------------- |
@@ -12,7 +12,7 @@ A Claude Code and Codex plugin that names [Rex](https://www.superlogical.com/rex
 
 - macOS or Linux, with a Rex terminal and `rex` on the `PATH`
 - Node.js 22.18 or newer
-- Claude Code or Codex with plugin support. Tested with Claude Code 2.1.325 and Codex 0.169.
+- A coding agent that sets a terminal title. Claude Code and Codex work out of the box and the plugin installs on both. Tested with Claude Code 2.1.325 and Codex 0.169. For any other agent, see below.
 
 ## Install
 
@@ -31,6 +31,16 @@ codex plugin add rex-session-names@rex-session-names
 ```
 
 Start a new agent session afterwards. In Codex, trust the hook in `/hooks` first.
+
+For any other agent, clone the repo, start the watcher from your shell profile or the agent's session start hook, and list the agent in `REX_SESSION_NAMES_APPS`.
+
+```bash
+git clone https://github.com/DaanRosendal/rex-session-names.git
+node rex-session-names/plugin/src/name-watcher.mjs start
+export REX_SESSION_NAMES_APPS=claude,codex,your-agent   # replaces the default list, then stop the watcher once
+```
+
+An agent is matched by its process name or by the `app` it reports to Rex. Its terminal title must be the task name, like `Fix login redirect`. Titles in other shapes, such as Pi's `π - task - folder`, give odd names.
 
 ## How it works
 
