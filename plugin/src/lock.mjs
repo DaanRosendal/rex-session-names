@@ -94,7 +94,8 @@ async function reclaim(path, text) {
     return false
   }
   try {
-    if ((await readFile(path, 'utf8').catch(() => '')) === text) await unlink(path).catch(() => {})
+    if ((await readFile(path, 'utf8').catch(() => undefined)) === text)
+      await unlink(path).catch(() => {})
   } finally {
     await file.close()
     await unlink(guard).catch(() => {})
@@ -104,7 +105,7 @@ async function reclaim(path, text) {
 
 // Returns a release function, or undefined when a running watcher already holds the lock.
 export async function claimLock(path, info = {}, holds = isWatcher) {
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     try {
       await create(path, info)
       return async () => {
@@ -112,7 +113,15 @@ export async function claimLock(path, info = {}, holds = isWatcher) {
       }
     } catch (error) {
       if (error.code !== 'EEXIST') throw error
-      const text = await readFile(path, 'utf8').catch(() => '')
+      let text
+      try {
+        text = await readFile(path, 'utf8')
+      } catch (readError) {
+        // A lock that vanished since the failed create has no owner to judge, so create it again. Reclaiming
+        // it could remove the lock another claimant has just made.
+        if (readError.code === 'ENOENT') continue
+        text = ''
+      }
       const held = parseLock(text)
       if (held && (await holds(held.pid))) return
       if (!(await reclaim(path, text))) return

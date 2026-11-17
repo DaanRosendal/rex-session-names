@@ -46,7 +46,7 @@ test('simultaneous claims on a free lock have exactly one winner', async t => {
 test('simultaneous claims on a stale lock have exactly one winner', async t => {
   const path = await lockPath(t)
   const holds = async pid => pid === process.pid
-  for (let round = 0; round < 30; round++) {
+  for (let round = 0; round < 300; round++) {
     await writeFile(path, JSON.stringify({ pid: 999999999 }))
     const results = await Promise.all(Array.from({ length: 8 }, () => claimLock(path, {}, holds)))
     assert.equal(results.filter(Boolean).length, 1, `round ${round}`)
