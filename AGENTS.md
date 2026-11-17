@@ -9,7 +9,7 @@ A plugin for Claude Code and Codex that names Rex sessions after the agent's tas
 - `name-watcher.mjs` is the entry point: `start` (the hook), `watch`, `stop` and `doctor`. Run `doctor` as `node plugin/src/name-watcher.mjs doctor`.
 - `lock.mjs` is the per-server lock and `rex-cli.mjs` runs `rex`.
 - `.claude-plugin/marketplace.json` and `.agents/plugins/marketplace.json` both point at `./plugin`. There is one manifest, `plugin/.claude-plugin/plugin.json`, and Codex reads it too.
-- `tests/watcher.test.mjs` holds a fake `rex` script. `tests/names.test.mjs` uses an in-memory fake Rex.
+- `tests/name-watcher.test.mjs` holds a fake `rex` script. `tests/names.test.mjs` uses an in-memory fake Rex.
 
 ## Commands
 

@@ -12,7 +12,7 @@
     "node": ">=22.18.0"
   },
   "scripts": {
-    "test": "node --test tests/names.test.mjs tests/lock.test.mjs tests/watcher.test.mjs tests/manifest.test.mjs",
+    "test": "node --test tests/names.test.mjs tests/lock.test.mjs tests/name-watcher.test.mjs tests/manifest.test.mjs",
     "test:integration": "node --test tests/rex-integration.test.mjs",
     "validate": "claude plugin validate . && claude plugin validate plugin",
     "format": "npx --yes prettier@3 --write .",
