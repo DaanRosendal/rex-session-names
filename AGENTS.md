@@ -7,13 +7,15 @@ A plugin for Claude Code and Codex that names Rex sessions after the agent's tas
 - `plugin/` is the only directory the hosts install. It holds the manifest, the SessionStart hook and the watcher in `src/`.
 - `names.mjs` turns a terminal title into a name (`sessionName`) and decides when to rename a session (`SessionNames`). It never calls Rex directly, it uses the runner it is given.
 - `name-watcher.mjs` is the entry point: `start` (the hook), `watch`, `stop` and `doctor`. Run `doctor` as `node plugin/src/name-watcher.mjs doctor`.
-- `lock.mjs` is the per-server lock and `rex-cli.mjs` runs `rex`.
+- `lock.mjs` is the per-server lock and `rex-cli.mjs` runs `rex`, parses its JSON and opens the event stream.
 - `.claude-plugin/marketplace.json` and `.agents/plugins/marketplace.json` both point at `./plugin`. There is one manifest, `plugin/.claude-plugin/plugin.json`, and Codex reads it too.
-- `tests/name-watcher.test.mjs` holds a fake `rex` script. `tests/names.test.mjs` uses an in-memory fake Rex.
+- `tests/*.test.mjs` are the unit tests, one per module, and `npm test` runs every one of them. `tests/name-watcher.test.mjs` holds a fake `rex` script and `tests/names.test.mjs` uses an in-memory fake Rex.
+- `tests/integration/rex.test.mjs` runs the watcher against a real Rex server, with `tests/fixtures/agent-terminal.mjs` standing in for an agent.
+- `CHANGELOG.md` feeds the release notes, and `SECURITY.md` is the vulnerability policy.
 
 ## Commands
 
-- `npm test`: unit tests. Needs Node 22 or newer.
+- `npm test`: unit tests. Needs Node 22.18 or newer.
 - `npm run test:integration`: needs a real `rex` on the `PATH`. It starts its own server and emulates an agent.
 - `npm run validate`: `claude plugin validate` on the plugin and the marketplace. Needs the `claude` CLI.
 - `npm run format`: Prettier. CI fails on unformatted files.
