@@ -8,6 +8,8 @@ import { test } from 'node:test'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
+import { isAlive } from '../plugin/src/lock.mjs'
+import { idle } from './helpers/idle.mjs'
 
 const exec = promisify(execFile)
 const manifest = fileURLToPath(new URL('../plugin/.claude-plugin/plugin.json', import.meta.url))
@@ -90,24 +92,6 @@ const lockFile = dir =>
     'data',
     `${createHash('sha256').update('unix:///fake/fake').digest('hex').slice(0, 16)}.pid`,
   )
-
-// Extra arguments after the script show up in the process command line, which is how a watcher is recognised.
-function idle(t, ...marker) {
-  const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1e6)', ...marker], {
-    stdio: 'ignore',
-  })
-  t.after(() => child.kill('SIGKILL'))
-  return child
-}
-
-const alive = pid => {
-  try {
-    process.kill(pid, 0)
-    return true
-  } catch {
-    return false
-  }
-}
 
 async function holdLock(dir, content) {
   await mkdir(join(dir, 'data'), { recursive: true })
@@ -249,7 +233,7 @@ test('start replaces a running watcher of an older version', async t => {
     const old = idle(t, 'name-watcher.mjs', 'watch')
     await holdLock(dir, JSON.stringify({ pid: old.pid, version: '0.0.1' }))
     await start(env)
-    assert.equal(alive(old.pid), false)
+    assert.equal(isAlive(old.pid), false)
     const held = await watcherLock(dir, old.pid)
     assert.equal(held.version, JSON.parse(await readFile(manifest, 'utf8')).version)
   })
@@ -264,7 +248,7 @@ test('start replaces a legacy watcher that wrote only its PID', async t => {
     )
     await holdLock(dir, String(old.pid))
     await start(env)
-    assert.equal(alive(old.pid), false)
+    assert.equal(isAlive(old.pid), false)
     await watcherLock(dir, old.pid)
   })
 })
@@ -278,7 +262,7 @@ test('start leaves a watcher of the same or a newer version running', async t =>
       const content = JSON.stringify({ pid: running.pid, version })
       await holdLock(dir, content)
       await start(env)
-      assert.equal(alive(running.pid), true)
+      assert.equal(isAlive(running.pid), true)
       assert.equal(await readFile(lockFile(dir), 'utf8'), content)
     }
     assert.equal(
@@ -294,7 +278,7 @@ test('start ignores a lock whose PID now belongs to an unrelated process', async
     const stranger = idle(t)
     await holdLock(dir, JSON.stringify({ pid: stranger.pid, version: '0.0.1' }))
     await start(env)
-    assert.equal(alive(stranger.pid), true)
+    assert.equal(isAlive(stranger.pid), true)
     await watcherLock(dir, stranger.pid)
   })
 })
@@ -305,14 +289,14 @@ test('stop ends every watcher, clears locks and spares unrelated processes', asy
     await holdLock(dir, JSON.stringify({ pid: watcher.pid, version: '0.1.0' }))
     const { stdout } = await exec(process.execPath, [plugin, 'stop'], { env })
     assert.equal(stdout.trim(), 'Stopped 1 watcher(s).')
-    assert.equal(alive(watcher.pid), false)
+    assert.equal(isAlive(watcher.pid), false)
     await assert.rejects(readFile(lockFile(dir)), { code: 'ENOENT' })
 
     const stranger = idle(t)
     await holdLock(dir, JSON.stringify({ pid: stranger.pid }))
     const again = await exec(process.execPath, [plugin, 'stop'], { env })
     assert.equal(again.stdout.trim(), 'No watcher is running.')
-    assert.equal(alive(stranger.pid), true)
+    assert.equal(isAlive(stranger.pid), true)
     await assert.rejects(readFile(lockFile(dir)), { code: 'ENOENT' })
   })
 })

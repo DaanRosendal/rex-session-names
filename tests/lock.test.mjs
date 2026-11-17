@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict'
-import { spawn } from 'node:child_process'
 import { mkdtemp, readFile, rm, stat, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -13,6 +12,7 @@ import {
   readLock,
   terminate,
 } from '../plugin/src/lock.mjs'
+import { idle } from './helpers/idle.mjs'
 
 const running = async () => true
 const dead = async () => false
@@ -21,15 +21,6 @@ async function lockPath(t) {
   const dir = await mkdtemp(join(tmpdir(), 'rex-lock-'))
   t.after(() => rm(dir, { recursive: true, force: true }))
   return join(dir, 'server.pid')
-}
-
-// Extra arguments after the script show up in the process command line, which is how isWatcher finds it.
-function idle(t, ...marker) {
-  const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1e6)', ...marker], {
-    stdio: 'ignore',
-  })
-  t.after(() => child.kill('SIGKILL'))
-  return child
 }
 
 test('only one watcher can claim a server, and its lock is private', async t => {
