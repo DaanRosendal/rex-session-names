@@ -16,12 +16,10 @@ test('both marketplaces serve the same plugin directory', async () => {
   assert.deepEqual(codex.plugins[0].source, { source: 'local', path: './plugin' })
 })
 
-test('the plugin has one manifest, shared by both hosts, and no Codex manifest', async () => {
+test('the plugin has one manifest, shared by both hosts', async () => {
   const manifest = await json('../plugin/.claude-plugin/plugin.json')
   assert.equal(manifest.name, 'rex-session-names')
   assert.match(manifest.version, /^\d+\.\d+\.\d+$/)
-  const entries = await readdir(new URL('../plugin/', import.meta.url), { recursive: true })
-  assert.ok(!entries.some(entry => entry.includes('.codex-plugin')))
 })
 
 test('the hook starts the watcher with the variable both hosts set', async () => {
@@ -32,12 +30,31 @@ test('the hook starts the watcher with the variable both hosts set', async () =>
   assert.equal(hook.async, true)
 })
 
-test('the marketplace entry names the manifest, and the hook script ships inside plugin/', async () => {
+test('the marketplace entry names the manifest', async () => {
   const manifest = await json('../plugin/.claude-plugin/plugin.json')
   const marketplace = await json('../.claude-plugin/marketplace.json')
   assert.equal(marketplace.plugins[0].name, manifest.name)
-  const entries = await readdir(new URL('../plugin/src/', import.meta.url))
-  assert.ok(entries.includes('name-watcher.mjs'))
+})
+
+test('the plugin directory holds only the files the hosts need, and no symlinks', async () => {
+  const names = []
+  async function walk(dir) {
+    for (const entry of await readdir(new URL(dir, import.meta.url), { withFileTypes: true })) {
+      const path = `${dir}${entry.name}`
+      assert.equal(entry.isSymbolicLink(), false, `${path} is a symlink`)
+      if (entry.isDirectory()) await walk(`${path}/`)
+      else names.push(path)
+    }
+  }
+  await walk('../plugin/')
+  assert.deepEqual(names.sort(), [
+    '../plugin/.claude-plugin/plugin.json',
+    '../plugin/hooks/hooks.json',
+    '../plugin/src/lock.mjs',
+    '../plugin/src/name-watcher.mjs',
+    '../plugin/src/names.mjs',
+    '../plugin/src/rex-cli.mjs',
+  ])
 })
 
 test('plugin source files import only each other and Node built-ins', async () => {
