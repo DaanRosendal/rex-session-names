@@ -6,13 +6,11 @@ import { promisify } from 'node:util'
 
 const exec = promisify(execFile)
 
-// Versions before 0.2.0 wrote the bare PID, so a plain integer is a lock from an older watcher.
 const LEGACY_VERSION = '0.0.0'
 const STOP_WAIT_MS = 3000
-// The second form is the command line of a 0.1.0 watcher, which ran from the Codex copy of the plugin.
 const WATCHER_COMMAND =
   /(?:name-watcher\.mjs|rex-session-names[^ ]*\/codex\/hooks\/watcher\.mjs) watch/
-// Reclaiming a stale lock is serialised by a guard file, which a crashed claimant can leave behind.
+// A crashed claimant can leave its reclaim guard file behind, so a guard older than this is removed.
 const RECLAIM_GUARD_EXPIRY_MS = 10000
 
 export function parseLock(text) {
